@@ -5,12 +5,12 @@ using UnityEngine.AI;
 using UnityEngine.UI;
 using static UnityEngine.GraphicsBuffer;
 
-public class EnermyController : MonoBehaviour
+public class EnemyController : MonoBehaviour
 {
     private GameObject character;
     public Transform target;
     public Rigidbody enermyRb;
-    public float speed = 10;
+    public float speed;
     //public float minDist = 1f;
     // Start is called before the first frame update
     void Start()
@@ -21,7 +21,7 @@ public class EnermyController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        enermyRb.AddForce((character.transform.position - this.transform.position).normalized * speed);
+        enermyRb.AddForce((character.transform.position - transform.position).normalized * speed);
     }
     // void Update()
     // {

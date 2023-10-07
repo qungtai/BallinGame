@@ -2,25 +2,31 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class CharacterControl : MonoBehaviour
 {
-    public float movingSpeed;
-   private Rigidbody rigidbody;
+    private Rigidbody rigidbody;
     private GameObject focalPoint;
-    private float powerUpStrength = 15;
     public bool isPowerUp = false;
     private SpawnManager spawn;
     public GameObject powerIndicator;
-    // Start is called before the first frame update
+
+    public float movingSpeed;
+    [FormerlySerializedAs("powerUpTime")] [SerializeField] private float powerUpTimeFirst = 5;
+    [FormerlySerializedAs("powerUpTimeCopy")] public float powerUpTime;
+    public float powerUpStrength = 15;
+    public int DiamondCount;  
+    bool IsStartCountDown = false;
     void Start()
     {
-        // We can code like this instead if we change public to private variable
-            rigidbody = GetComponent<Rigidbody>();
-            focalPoint = GameObject.Find("FocalPoint");
-            spawn = GameObject.Find("SpawnManager").GetComponent<SpawnManager>();
+        rigidbody = GetComponent<Rigidbody>();
+        focalPoint = GameObject.Find("FocalPoint");
+        spawn = GameObject.Find("SpawnManager").GetComponent<SpawnManager>();
+        powerUpTime = powerUpTimeFirst;
     }
     void FixedUpdate()
     {
@@ -28,10 +34,8 @@ public class CharacterControl : MonoBehaviour
         rigidbody.AddForce(focalPoint.transform.forward * direction   * movingSpeed);
         if (transform.position.y <= -4)
         {
-            SceneManager.LoadScene("GamePlay");
+            OnLose();
         }
-
-
         
         powerIndicator.transform.position = transform.position;
         if (isPowerUp)
@@ -40,18 +44,35 @@ public class CharacterControl : MonoBehaviour
         } 
         else powerIndicator.gameObject.SetActive(false);
 
+        if (IsStartCountDown)
+        {
+            powerUpTime -= Time.deltaTime;
+        }
+
+        if (powerUpTime <= 0)
+        {
+            IsStartCountDown = false;
+            powerUpTime = powerUpTimeFirst;
+        }
+        
+    }
+
+    private void OnLose()
+    {
+        DataPaste.Time = string.Format("{0:00}:{1:00}",Mathf.FloorToInt(spawn.remainingTime / 60),Mathf.FloorToInt(spawn.remainingTime % 60));
+        DataPaste.Diamond = DiamondCount;
+        DataPaste.Level = spawn.level;
+        SceneManager.LoadSceneAsync("Scenes/ScoreScene");
+        Time.timeScale = 1;
     }
 
     IEnumerator effectiveTimeOfPower()
     {
-        //yield on a new YieldInstruction that waits for 5 seconds.
-        yield return new WaitForSeconds(5);
+        yield return new WaitForSeconds(powerUpTimeFirst);
 
-        //After we have waited 5 seconds disable power and instante new diamond.
         isPowerUp = false;
 
         yield return new WaitForSeconds(2);
-        
         spawn.InstanteDiamond();
     } 
     private void OnTriggerEnter(Collider other)
@@ -59,9 +80,10 @@ public class CharacterControl : MonoBehaviour
         if (other.gameObject.CompareTag("Diamond"))
         {
             Destroy(other.gameObject);
-            isPowerUp = true; 
+            isPowerUp = true;
+            DiamondCount++;
+            IsStartCountDown = true; 
             StartCoroutine(effectiveTimeOfPower());
-
         }
     }
 
